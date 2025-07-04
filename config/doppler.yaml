@@ -46,7 +46,7 @@ autoencoder_params:
 train_params:
   seed: 1111
   task_name: '/kaggle/working/output'
-  ldm_batch_size: 3  # 减小批量以适应更深的网络
+  ldm_batch_size: 2  # 减小批量以适应更深的网络
   autoencoder_batch_size: 2
   ldm_acc_steps: 4  # 增加梯度累积步数以弥补批量减小
   disc_start: 500

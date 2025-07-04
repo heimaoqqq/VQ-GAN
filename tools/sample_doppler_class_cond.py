@@ -95,7 +95,7 @@ def sample_batch(model, scheduler, diffusion_model_config,
             # 确保i是CPU上的标量，让调度器自己处理设备转换
             xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, int(i), eta=eta)
         else:
-        xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
+            xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
     
     # 解码最终结果
     with torch.no_grad():
@@ -205,7 +205,7 @@ def infer(args):
                                  beta_end=diffusion_config['beta_end'],
                                  sampling_steps=args.steps)
     else:
-    scheduler = LinearNoiseScheduler(num_timesteps=diffusion_config['num_timesteps'],
+        scheduler = LinearNoiseScheduler(num_timesteps=diffusion_config['num_timesteps'],
                                      beta_start=diffusion_config['beta_start'],
                                      beta_end=diffusion_config['beta_end'])
     

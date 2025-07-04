@@ -19,8 +19,6 @@ from scheduler.linear_noise_scheduler import LinearNoiseScheduler
 from utils.text_utils import *
 from utils.config_utils import *
 from utils.diffusion_utils import *
-# 导入混合精度训练所需模块
-from torch.cuda.amp import autocast, GradScaler
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -41,15 +39,9 @@ def train(args):
     autoencoder_model_config = config['autoencoder_params']
     train_config = config['train_params']
     
-    # 获取是否使用混合精度训练的参数，默认为True
-    use_amp = train_config.get('use_amp', True)
-    if use_amp:
-        print("启用混合精度训练 (AMP)，将减少约50%的显存使用")
-    else:
-        print("未启用混合精度训练")
-        
-    # 创建梯度缩放器用于混合精度训练
-    scaler = GradScaler(enabled=use_amp)
+    # 设置use_amp为False，表明不使用混合精度
+    use_amp = False
+    print("未启用混合精度训练")
     
     ########## Create the noise scheduler #############
     scheduler = LinearNoiseScheduler(num_timesteps=diffusion_config['num_timesteps'],
@@ -148,64 +140,60 @@ def train(args):
                 with torch.no_grad():
                     im, _ = vae.encode(im)
                     
-            # 使用混合精度进行前向计算
-            with autocast(enabled=use_amp):
-                ########### Handling Conditional Input ###########
-                if 'text' in condition_types:
-                    with torch.no_grad():
-                        assert 'text' in cond_input, 'Conditioning Type Text but no text conditioning input present'
-                        validate_text_config(condition_config)
-                        text_condition = get_text_representation(cond_input['text'],
-                                                                    text_tokenizer,
-                                                                    text_model,
-                                                                    device)
-                        text_drop_prob = get_config_value(condition_config['text_condition_config'],
-                                                        'cond_drop_prob', 0.)
-                        text_condition = drop_text_condition(text_condition, im, empty_text_embed, text_drop_prob)
-                        cond_input['text'] = text_condition
-                if 'image' in condition_types:
-                    assert 'image' in cond_input, 'Conditioning Type Image but no image conditioning input present'
-                    validate_image_config(condition_config)
-                    cond_input_image = cond_input['image'].to(device)
-                    # Drop condition
-                    im_drop_prob = get_config_value(condition_config['image_condition_config'],
-                                                        'cond_drop_prob', 0.)
-                    cond_input['image'] = drop_image_condition(cond_input_image, im, im_drop_prob)
-                if 'class' in condition_types:
-                    assert 'class' in cond_input, 'Conditioning Type Class but no class conditioning input present'
-                    validate_class_config(condition_config)
-                    class_condition = torch.nn.functional.one_hot(
-                        cond_input['class'],
-                        condition_config['class_condition_config']['num_classes']).to(device)
-                    class_drop_prob = get_config_value(condition_config['class_condition_config'],
+            ########### Handling Conditional Input ###########
+            if 'text' in condition_types:
+                with torch.no_grad():
+                    assert 'text' in cond_input, 'Conditioning Type Text but no text conditioning input present'
+                    validate_text_config(condition_config)
+                    text_condition = get_text_representation(cond_input['text'],
+                                                                text_tokenizer,
+                                                                text_model,
+                                                                device)
+                    text_drop_prob = get_config_value(condition_config['text_condition_config'],
                                                     'cond_drop_prob', 0.)
-                    # Drop condition
-                    cond_input['class'] = drop_class_condition(class_condition, class_drop_prob, im)
-                ################################################
-                
-                # Sample random noise
-                noise = torch.randn_like(im).to(device)
-                
-                # Sample timestep
-                t = torch.randint(0, diffusion_config['num_timesteps'], (im.shape[0],)).to(device)
-                
-                # Add noise to images according to timestep
-                noisy_im = scheduler.add_noise(im, noise, t)
-                noise_pred = model(noisy_im, t, cond_input=cond_input)
-                loss = criterion(noise_pred, noise) / acc_steps
+                    text_condition = drop_text_condition(text_condition, im, empty_text_embed, text_drop_prob)
+                    cond_input['text'] = text_condition
+            if 'image' in condition_types:
+                assert 'image' in cond_input, 'Conditioning Type Image but no image conditioning input present'
+                validate_image_config(condition_config)
+                cond_input_image = cond_input['image'].to(device)
+                # Drop condition
+                im_drop_prob = get_config_value(condition_config['image_condition_config'],
+                                                    'cond_drop_prob', 0.)
+                cond_input['image'] = drop_image_condition(cond_input_image, im, im_drop_prob)
+            if 'class' in condition_types:
+                assert 'class' in cond_input, 'Conditioning Type Class but no class conditioning input present'
+                validate_class_config(condition_config)
+                class_condition = torch.nn.functional.one_hot(
+                    cond_input['class'],
+                    condition_config['class_condition_config']['num_classes']).to(device)
+                class_drop_prob = get_config_value(condition_config['class_condition_config'],
+                                                'cond_drop_prob', 0.)
+                # Drop condition
+                cond_input['class'] = drop_class_condition(class_condition, class_drop_prob, im)
+            ################################################
+            
+            # Sample random noise
+            noise = torch.randn_like(im).to(device)
+            
+            # Sample timestep
+            t = torch.randint(0, diffusion_config['num_timesteps'], (im.shape[0],)).to(device)
+            
+            # Add noise to images according to timestep
+            noisy_im = scheduler.add_noise(im, noise, t)
+            noise_pred = model(noisy_im, t, cond_input=cond_input)
+            loss = criterion(noise_pred, noise) / acc_steps
             
             losses.append(loss.item() * acc_steps)  # 记录未缩放的损失
             
-            # 使用梯度缩放器进行反向传播
-            scaler.scale(loss).backward()
+            # 直接进行反向传播，不使用scaler
+            loss.backward()
             
             # 梯度累积处理
             if (idx + 1) % acc_steps == 0 or (idx + 1) == len(data_loader):
-                # 更新参数
-                scaler.step(optimizer)
+                # 更新参数，直接使用optimizer.step()
+                optimizer.step()
                 optimizer.zero_grad()
-                # 更新缩放器
-                scaler.update()
             
         print('Finished epoch:{} | Loss : {:.4f}'.format(
             epoch_idx + 1,

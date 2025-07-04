@@ -47,7 +47,7 @@ train_params:
   seed: 1111
   task_name: '/kaggle/working/output'
   ldm_batch_size: 2  # 减小批量以适应更深的网络
-  autoencoder_batch_size: 4
+  autoencoder_batch_size: 2
   ldm_acc_steps: 16  # 增加梯度累积步数以弥补批量减小
   disc_start: 500
   disc_weight: 0.8
@@ -61,10 +61,10 @@ train_params:
   num_grid_rows: 2
   ldm_lr: 0.00001  # 降低学习率以稳定训练
   autoencoder_lr: 0.0001
-  autoencoder_acc_steps: 8
+  autoencoder_acc_steps: 16
   autoencoder_img_save_steps: 8
   save_latents: True
-  use_amp: False  # 混合精度训练
+  use_amp: False  # 显式设置为False，禁用混合精度训练
   cf_guidance_scale: 5.0  # 添加分类器引导尺度
   vae_latent_dir_name: 'vae_latents'
   vqvae_latent_dir_name: 'vqvae_latents'

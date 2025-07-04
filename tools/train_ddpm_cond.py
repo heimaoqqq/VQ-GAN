@@ -25,10 +25,12 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def train(args):
     # Read the config file #
-    with open(args.config_path, 'r', encoding='utf-8') as file:
-        try:
-            config = yaml.safe_load(file)
-        except yaml.YAMLError as exc:
+    try:
+        config = read_config(args.config_path)
+    except Exception as exc:
+        if hasattr(exc, 'message'):
+            print(exc.message)
+        else:
             print(exc)
     print(config)
     ########################

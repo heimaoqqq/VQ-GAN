@@ -1,3 +1,21 @@
+import yaml
+
+def read_config(config_path):
+    """
+    读取YAML配置文件并返回配置字典
+    
+    参数:
+    config_path: YAML配置文件的路径
+    
+    返回:
+    配置字典
+    """
+    with open(config_path, 'r', encoding='utf-8') as file:
+        try:
+            config = yaml.safe_load(file)
+            return config
+        except yaml.YAMLError as exc:
+            raise exc
 
 def validate_class_config(condition_config):
     assert 'class_condition_config' in condition_config, \

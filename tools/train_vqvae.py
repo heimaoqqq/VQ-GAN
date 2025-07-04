@@ -18,10 +18,63 @@ from utils.config_utils import read_config
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+# 添加潜在表示保存函数
+def save_latents(model, dataset_config, train_config, device):
+    """保存所有训练和验证数据的潜在表示"""
+    # 创建保存目录
+    latent_dir = os.path.join(train_config['task_name'], train_config['vqvae_latent_dir_name'])
+    if not os.path.exists(latent_dir):
+        os.makedirs(latent_dir)
+        
+    # 加载训练数据集
+    im_dataset_cls = {
+        'mnist': MnistDataset,
+        'celebhq': CelebDataset,
+        'doppler': DopplerDataset,
+    }.get(dataset_config['name'])
+    
+    for split in ['train', 'val']:
+        print(f"处理{split}数据集的潜在表示...")
+        im_dataset = im_dataset_cls(split=split,
+                                    im_path=dataset_config['im_path'],
+                                    im_size=dataset_config['im_size'],
+                                    im_channels=dataset_config['im_channels'])
+        
+        data_loader = DataLoader(im_dataset,
+                                batch_size=16,  # 使用较大的批量加速处理
+                                shuffle=False)  # 保持顺序
+        
+        all_latents = []
+        all_indices = []
+        
+        with torch.no_grad():
+            for batch_idx, im in enumerate(tqdm(data_loader)):
+                im = im.float().to(device)
+                # 获取潜在表示
+                _, z, _ = model(im)
+                z = z.cpu().numpy()
+                all_latents.append(z)
+                
+                # 生成索引
+                batch_size = im.shape[0]
+                start_idx = batch_idx * data_loader.batch_size
+                indices = list(range(start_idx, start_idx + batch_size))
+                all_indices.extend(indices)
+        
+        # 合并所有批次的潜在表示
+        all_latents = np.concatenate(all_latents, axis=0)
+        
+        # 保存潜在表示
+        for idx, latent in zip(all_indices, all_latents):
+            latent_path = os.path.join(latent_dir, f"{split}_{idx}.npy")
+            np.save(latent_path, latent)
+    
+    print(f"潜在表示已保存到 {latent_dir}")
+
 def train(args):
     # Read the config file #
     try:
-        config = read_config(args.config)
+        config = read_config(args.config_path)
     except Exception as exc:
         if hasattr(exc, 'message'):
             print(exc.message)
@@ -224,16 +277,16 @@ def train(args):
         torch.save(discriminator.state_dict(), os.path.join(train_config['task_name'],
                                                              train_config['vqvae_discriminator_ckpt_name']))
 
-        # Save latents after training
-        if train_config['save_latents']:
-            print('正在保存潜在表示...')
-            save_latents(model, dataset_config, train_config, device)
+    # 训练完成后保存潜在表示
+    if train_config['save_latents']:
+        print('正在保存潜在表示...')
+        save_latents(model, dataset_config, train_config, device)
     
     print('训练完成...')
         
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Arguments for vqvae training')
-    parser.add_argument('--config', dest='config', type=str)
+    parser.add_argument('--config', dest='config_path', type=str)
     args = parser.parse_args()
     train(args)

@@ -30,13 +30,10 @@ ldm_params:
 autoencoder_params:
   z_channels: 5  # 保持原始通道数
   codebook_size: 800  # 保持原始码书大小
-  z_channels: 5  # 保持原始通道数
-  codebook_size: 800  # 保持原始码书大小
   down_channels: [64, 128, 128]  # 保持原始通道配置
   mid_channels: [128, 128]
   down_sample: [True, True]
-  attn_down: [False, False] 
-  attn_down: [False, False] 
+  attn_down: [False, False]  # 自编码器不使用注意力
   norm_channels: 64
   num_heads: 16  # 增加注意力头数量，与LDM模型保持一致
   num_down_layers: 1
@@ -46,7 +43,7 @@ autoencoder_params:
 train_params:
   seed: 1111
   task_name: '/kaggle/working/output'
-  ldm_batch_size: 2  # 减小批量以适应更深的网络
+  ldm_batch_size: 3  # 减小批量以适应更深的网络
   autoencoder_batch_size: 2
   ldm_acc_steps: 4  # 增加梯度累积步数以弥补批量减小
   disc_start: 500
@@ -55,15 +52,16 @@ train_params:
   commitment_beta: 1.3  # 略微提高承诺损失
   perceptual_weight: 0.15  # 略微降低感知损失
   kl_weight: 0.0
-  ldm_epochs: 1  # 增加训练轮数
-  autoencoder_epochs: 1
+  ldm_epochs: 40  # 调整LDM训练轮数以适应Kaggle时间限制
+  autoencoder_epochs: 30  # 调整自编码器训练轮数
   num_samples: 8
   num_grid_rows: 2
-  ldm_lr: 0.00001  # 降低学习率以稳定训练
-  autoencoder_lr: 0.0001
+  ldm_lr: 0.00002  # 提高LDM学习率以加速训练
+  autoencoder_lr: 0.0002  # 提高自编码器学习率以加速训练
   autoencoder_acc_steps: 4
   autoencoder_img_save_steps: 500
   save_latents: True
+  use_amp: False  # 显式设置为False，禁用混合精度训练
   cf_guidance_scale: 5.0  # 添加分类器引导尺度
   vae_latent_dir_name: 'vae_latents'
   vqvae_latent_dir_name: 'vqvae_latents'

@@ -18,7 +18,7 @@ from utils.config_utils import read_config
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# 添加潜在表示保存函数
+# 保留save_latents函数但不在train函数中调用，用户可以单独使用infer_vqvae.py
 def save_latents(model, dataset_config, train_config, device):
     """保存所有训练和验证数据的潜在表示"""
     # 创建保存目录
@@ -277,12 +277,9 @@ def train(args):
         torch.save(discriminator.state_dict(), os.path.join(train_config['task_name'],
                                                              train_config['vqvae_discriminator_ckpt_name']))
 
-    # 训练完成后保存潜在表示
-    if train_config['save_latents']:
-        print('正在保存潜在表示...')
-        save_latents(model, dataset_config, train_config, device)
-    
+    # 移除自动保存潜在表示的代码，用户应该使用infer_vqvae.py生成
     print('训练完成...')
+    print('请使用 python -m tools.infer_vqvae --config config/doppler.yaml 生成潜在表示')
         
 if __name__ == '__main__':
     import argparse

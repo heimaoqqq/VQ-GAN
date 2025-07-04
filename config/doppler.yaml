@@ -46,17 +46,17 @@ autoencoder_params:
 train_params:
   seed: 1111
   task_name: '/kaggle/working/output'
-  ldm_batch_size: 2  # 减小批量以适应更深的网络
+  ldm_batch_size: 4  # 减小批量以适应更深的网络
   autoencoder_batch_size: 4
-  ldm_acc_steps: 16  # 增加梯度累积步数以弥补批量减小
+  ldm_acc_steps: 8  # 增加梯度累积步数以弥补批量减小
   disc_start: 500
   disc_weight: 0.8
   codebook_weight: 2.8  # 略微提高码书权重
   commitment_beta: 1.3  # 略微提高承诺损失
   perceptual_weight: 0.15  # 略微降低感知损失
   kl_weight: 0.0
-  ldm_epochs: 120  # 增加训练轮数
-  autoencoder_epochs: 40
+  ldm_epochs: 1  # 增加训练轮数
+  autoencoder_epochs: 1
   num_samples: 8
   num_grid_rows: 2
   ldm_lr: 0.00001  # 降低学习率以稳定训练

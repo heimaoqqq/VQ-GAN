@@ -16,11 +16,11 @@ ldm_params:
   attn_down: [True, True, True]  # 在所有层启用注意力
   time_emb_dim: 256
   norm_channels: 64
-  num_heads: 8
-  conv_out_channels: 128
-  num_down_layers: 2  # 增加网络深度
-  num_mid_layers: 2  # 增加网络深度
-  num_up_layers: 2  # 增加网络深度
+  num_heads: 16  # 增加注意力头数量，确保通道数能被头数整除
+  conv_out_channels: 192  # 提高输出通道数以增强表达能力
+  num_down_layers: 1  # 恢复为1层，提高训练速度
+  num_mid_layers: 1  # 恢复为1层，提高训练速度
+  num_up_layers: 1  # 恢复为1层，提高训练速度
   condition_config:
     condition_types: ['class']  # 类别条件
     class_condition_config:
@@ -38,7 +38,7 @@ autoencoder_params:
   attn_down: [False, False] 
   attn_down: [False, False] 
   norm_channels: 64
-  num_heads: 8
+  num_heads: 16  # 增加注意力头数量，与LDM模型保持一致
   num_down_layers: 1
   num_mid_layers: 1
   num_up_layers: 1

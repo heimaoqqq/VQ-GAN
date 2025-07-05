@@ -53,7 +53,7 @@ train_params:
   perceptual_weight: 0.15  # 略微降低感知损失
   kl_weight: 0.0
   ldm_epochs: 70  # 调整LDM训练轮数以适应Kaggle时间限制
-  autoencoder_epochs: 1  # 调整自编码器训练轮数
+  autoencoder_epochs: 50  # 调整自编码器训练轮数
   num_samples: 8
   num_grid_rows: 2
   ldm_lr: 0.00005  # 提高LDM学习率以加速训练
